@@ -40,7 +40,6 @@ get_outcome <- function(N){
   events <- sample( wheel, N, replace=TRUE) #
   x <- sum(as.numeric(events == "black"))
   S_N <- x # not 2*x . return ONLY earnings, not earnings plus cost
-  S_N
 }
 
 get_outcome(10)
@@ -133,7 +132,7 @@ You run a bank that has a history of identifying potential homeowners that can b
 
 ## Problem 2A
 
-Your bank gives out 1,000 loans this year. Create a sampling model and use the function `sample` to simulate the number of foreclosure in a year with the information that 2% of customers default. Also suppose your bank loses $120,000 on each foreclosure. Run the simulation for one year and report your loss.
+Your bank gives out 1,000 loans this year. Create a sampling model and use the function `sample` to simulate the number of foreclosures in a year with the information that 2% of customers default. Also suppose your bank loses $120,000 on each foreclosure. Run the simulation for one year and report your loss.
 
 ```{r}
 ##your code here
@@ -141,14 +140,13 @@ Your bank gives out 1,000 loans this year. Create a sampling model and use the f
 #sampling model
 mortgageOutcome <- sample(rep( c("good", "bad"), times = c(98,2)),100,replace=FALSE)
 
-getAnnualLosses <- function(){
-annualLosses <- sample( mortgageOutcome, 1000, replace=TRUE) #
-  x <- sum(as.numeric(events == "bad"))
-  S_N <- x*120000 # return ONLY losses
-  S_N
+getAnnualLosses <- function(n){
+annualLosses <- sample( mortgageOutcome, n, replace=TRUE) #
+  x <- sum(as.numeric(annualLosses == "bad"))# get number of bad loans
+  losses <- x*120000 # return ONLY losses
 }
 
-
+losses <- getAnnualLosses(1000)
 ```
 
 ## Problem 2B
@@ -157,7 +155,22 @@ Note that the loss you will incur is a random variable. Use Monte Carlo simulati
 
 ```{r}
 ##your code here
+
+mortageMonty <- function(loans, B=10000){
+  resultSet <- replicate( B, getAnnualLosses(loans))
+}
+
+simulation <- mortageMonty(1000)
+summary(simulation)
+simMean <- mean(simulation)
+simSd <- sd(simulation)
+# need to create prob distribution graph
+p2 <- ggplot(simulation, 
+            aes(x=simulation)) 
+p2 + geom_histogram() + scale_x_log10()
 ```
+The Monte Carlo simulation was run 10,000 times, simulating 10,000 tries where 2% of loans fail with an average loss per loan of $120,000. Under these conditions, the bank stands to lose about two and a half million dollars/yr to bad loans when issuing one thousand loans, with a mean of 2,401,812 and a standard deviation of 537,967.
+
 
 ## Problem 2C
 
@@ -166,6 +179,15 @@ The 1,000 loans you gave out were for $180,000. The way your bank can give out l
 Your solution here. 
 ```{r}
 ###your code here
+getAnnualProfit <- function(n, interestRate){
+annualProfit <- sample( mortgageOutcome, n, replace=TRUE) #
+  x <- sum(as.numeric(annualProfit == "good"))# get number of good loans
+  profit <- x*(180000*interestRate) # calc profit from the good loans
+  profit-getAnnualLosses(n) # subtract losses from bad
+}
+
+profits <- getAnnualProfit(1000, .02)#.00057)# should have been .02 ?
+
 ```
 
 
@@ -175,6 +197,7 @@ In problem 2C, you were able to set a very low interest rate. Your customers wil
 
 ```{r}
 ##your code here
+pbinom(getAnnualProfit(1000, .02),10000,0)
 ```
 
 ## Problem 2E
