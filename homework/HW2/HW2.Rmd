@@ -42,7 +42,7 @@ get_outcome <- function(N){
   S_N <- x # not 2*x . return ONLY earnings, not earnings plus cost
 }
 
-get_outcome(10)
+s = get_outcome(10)
 ```
 
 ## Problem 1B
@@ -53,49 +53,60 @@ Use Monte Carlo simulation to study the distribution of total earnings $S_N$ for
 ##Your code here
 full_monty <- function(plays, B=10000){
 earnings <- replicate( B, get_outcome(plays))
+#mean(earnings/plays)
 #x <- sum(as.numeric(spins == "black"))# total blacks
 #tab <- table(spins)
 #prop.table(tab)
 }
 n <- c(10,25,100,1000)
 prob <- sapply(n,full_monty)
-sample10s <- prob[,1]
-sample25s <- prob[,2]
-sample100s <- prob[,3]
-sample1000s <- prob[,4]
-summary(sample10s)
-summary(sample25s)
-summary(sample100s)
-summary(sample1000s)
-hist(sample10s)
-hist(sample25s)
-hist(sample100s)
-hist(sample1000s)
+sample10plays <- prob[,1]
+sample25plays <- prob[,2]
+sample100plays <- prob[,3]
+sample1000plays <- prob[,4]
+summary(sample10plays)
+summary(sample25plays)
+summary(sample100plays)
+summary(sample1000plays)
+
+sd(sample10plays)
+sd(sample25plays)
+sd(sample100plays)
+sd(sample1000plays)
+# use ggplot to create a line chart comparing low to high earnings for 10,25,100,1000. Doing this in log scale would equalize the data? And or do it with facets for diff charts
+hist(sample10plays)
+hist(sample25plays)
+hist(sample100plays)
+hist(sample1000plays)
+
+df <- as.data.frame(prob)
+colnames(df) <- n # set names 10, 25, etc on columns
+comparePlot <- ggplot(df,aes(x=n,y=n))
+comparePlot+geom_line()+facet_grid(10~.)
+qplot(x=n, data=df)
+
+### this plot fails
 
 ```
 
-As the number of plays increases, the probability of winning decreases. This can be demonstrated by running a simulation of 10,000 trials using plays of 10, 25, 100 and 1000. Of particular interest are the histograms of earnings across the sample trial sizes. While the frequency distribution of all plays remains roughly normal, there is a noticable bunching in the distribution towards values in the center as the play stretches into higher numbers. This indicates that there is a significanly lower return per dollar, and a higher likelihood of loss when playing more tries.
+As the number of plays increases, the probability of losing also increases. This can be demonstrated by running a simulation of 10,000 trials using plays of 10, 25, 100 and 1000 and viewing histograms of earnings across the sample trial sizes. While the frequency distribution of all plays remains roughly normal, there is a noticable bunching in the distribution towards values in the center as the play moves into higher numbers. This indicates that there is a smaller standard deviation, which means a higher likelihood that the outcome will approach the expected value, which favors the casino.
 
-  # plays/ mean return
-   10/4.74 [4.738]
-   25/11.82
-   100/47.40
-   1000/473.80
 
 
 ## Problem 1C
 
 What is the expected value of our sampling model? What is the standard deviation of our sampling model?
 
-Your answer here.
 
-We are betting that the roulette spin will return a result of black. There are 38 total outcomes, of which 18 are black, 18 are red and 2 are green. The probability of a black is 18/38, or 9/19, which is 47%. The cost of each play is $1, and the mean expected return is .47 cents, for an average expected loss of .63 cents per play.
-The Standard Deviation of the sampling model is approximately .16 cents. This can be observed by taking the results or any one of the Monte Carlo simulation and diving the sample sd by the number of tries (plays) used in the simulation.
+We are betting that the roulette spin will return a result of black. There are 38 total outcomes, of which 18 are black, 18 are red and 2 are green. The probability of a black is 18/38, or 9/19, which is 47% or 0.47 probability. The cost of each play is $1, and the mean expected return is .47 cents, for an average expected loss of .53 cents per play.
+The Standard Deviation of the sampling model is approximately .16 cents.
+So the theoretical Expected Value is .16 return on the dollar.
+This can be observed by taking the results or any one of the Monte Carlo simulation and diving the sample sd by the number of tries (plays) used in the simulation.
 
 ```{r}
-modelSD10 <- sd(sample10s)/10
-modelSD25 <- sd(sample25s)/25
-modelSD1000 <- sd(sample1000s)/1000
+sd(sample10plays)/10
+sd(sample25plays)/25
+sd(sample1000plays)/1000
 
 ```
 
@@ -104,13 +115,23 @@ modelSD1000 <- sd(sample1000s)/1000
 
 Use CLT to approximate the probability that the casino loses money when you play 25 times. Then use a Monte Carlo simulation to confirm.
 
-The Central Limit Theorum holds that with a sample size of >= 30, the sample distribution will resemble a normal distribution, with the approximation of normal increasing as the sample size increases.
+The Central Limit Theorum holds that with a sample size of >= 30, the sample distribution will resemble a normal distribution, with the approximation of the normal distribution increasing as the sample size increases. With a sample size of < 30, as in our case, the results are less certain and more succeptible to error.
+But for purposes of estimation, we know that the probability that the casino loses are 0.47 based on the design of the game.
+With 25 bets, the player has a cost of $25. Using the simple binary formula for standard deviation given in the lecture, the expected value can be calculated using Sample size x the probability of interest. In our case, this means Expected Value = 25(.47) = 11.75. The Standard Error will be the Square Root of (the Expected value x [1-.47])
+The standard error for our case will be 2.5.
 
 ```{r}
 ##Your code here
-mean(sample25s)
-sd(sample25s)
-hist(pnorm(sample25s,11.82,2.48))
+tries <- 25
+pb <- .47
+ExpV <- tries*pb
+StErr <- sqrt(ExpV*(1-pb))
+
+sim25 <- full_monty(25)
+plot(sim25)
+mean(sim25)
+sd(sim25)
+hist(pnorm(sim25,mean(sim25),sd(sim25)))
 ```
 
 
@@ -164,10 +185,12 @@ simulation <- mortageMonty(1000)
 summary(simulation)
 simMean <- mean(simulation)
 simSd <- sd(simulation)
+simDF <- as.data.frame(simulation)
+colnames(simDF) <- c("losses") # set names
 # need to create prob distribution graph
-p2 <- ggplot(simulation, 
-            aes(x=simulation)) 
-p2 + geom_histogram() + scale_x_log10()
+p2 <- ggplot(simDF, 
+            aes(x=losses)) 
+p2 + geom_histogram() + stat_bin(binwidth = 50) + scale_x_log10()
 ```
 The Monte Carlo simulation was run 10,000 times, simulating 10,000 tries where 2% of loans fail with an average loss per loan of $120,000. Under these conditions, the bank stands to lose about two and a half million dollars/yr to bad loans when issuing one thousand loans, with a mean of 2,401,812 and a standard deviation of 537,967.
 
@@ -179,17 +202,28 @@ The 1,000 loans you gave out were for $180,000. The way your bank can give out l
 Your solution here. 
 ```{r}
 ###your code here
-getAnnualProfit <- function(n, interestRate){
+
+getProfit <- function(n, interestRate){
 annualProfit <- sample( mortgageOutcome, n, replace=TRUE) #
-  x <- sum(as.numeric(annualProfit == "good"))# get number of good loans
-  profit <- x*(180000*interestRate) # calc profit from the good loans
-  profit-getAnnualLosses(n) # subtract losses from bad
+  x <- sum(annualProfit == "good")# get number of good loans
+  profitsWInterest = x*180000*interestRate # annual profit on good loans
+  losses <- sum(annualProfit == "bad") # get losses
+  lossValue <- losses*12000
+  net = profitsWInterest-lossValue # net will return the annual balance
+  #c(profitsWInterest,losses,net) # return a matrix of figures
 }
 
-profits <- getAnnualProfit(1000, .02)#.00057)# should have been .02 ?
+profits <- getProfit(1000, .002)# this is a test
+
+profitMCarlo <- function(loans, interestRate, B=10000){
+  resultSet <- replicate( B, getProfit(loans, interestRate))
+}
+
+profit002 <- profitMCarlo(1000,.002)
+mean(profit002)
 
 ```
-
+Losses occur very infrequently with this model, where only 2% of loans default. This model will return a profit with a very low rate of interest. Although the values returned from the MonteCarlo simulation are random, I can consistently see a profit of somewhere just $100,000 by charging interest rates around .002 or 0.2%
 
 ## Problem 2D
 
@@ -197,7 +231,9 @@ In problem 2C, you were able to set a very low interest rate. Your customers wil
 
 ```{r}
 ##your code here
-pbinom(getAnnualProfit(1000, .02),10000,0)
+# original model proposes c("good", "bad"), times = c(98,2)/100
+# prob of good = p(.98), prob of bad = p(.02) mean losses are 240,000. total loans value 180,000 x 1000 or 180,000,000
+pnorm(-1) + 1-pnorm(1)
 ```
 
 ## Problem 2E
@@ -210,6 +246,9 @@ Your solution here.
 
 ```{r}
 ###your code here
+
+profit001 <- profitMCarlo(1000,.001)
+mean(profit001)
 ```
 
 ## Problem 2F
