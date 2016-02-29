@@ -2,7 +2,9 @@
 title: "Homework 2: The Big Short"
 output: html_document
 ---
- 
+#### Fred Evers, CSCI E-107
+
+
 **This homework is due Friday February 26, 2016 at 5:00 PM. When complete, submit your code in the R Markdown file and the knitted HTML via GitHub.**
 
 # Background 
@@ -42,7 +44,7 @@ get_outcome <- function(N){
   S_N <- x # not 2*x . return ONLY earnings, not earnings plus cost
 }
 
-s = get_outcome(10)
+s = get_outcome(10) # this is a test
 ```
 
 ## Problem 1B
@@ -51,7 +53,7 @@ Use Monte Carlo simulation to study the distribution of total earnings $S_N$ for
 
 ```{r}
 ##Your code here
-full_monty <- function(plays, B=10000){
+roulette_monty <- function(plays, B=10000){
 earnings <- replicate( B, get_outcome(plays))
 #mean(earnings/plays)
 #x <- sum(as.numeric(spins == "black"))# total blacks
@@ -59,31 +61,26 @@ earnings <- replicate( B, get_outcome(plays))
 #prop.table(tab)
 }
 n <- c(10,25,100,1000)
-prob <- sapply(n,full_monty)
-sample10plays <- prob[,1]
-sample25plays <- prob[,2]
-sample100plays <- prob[,3]
-sample1000plays <- prob[,4]
-summary(sample10plays)
-summary(sample25plays)
-summary(sample100plays)
-summary(sample1000plays)
+prob <- sapply(n,roulette_monty) # returns list of vectors
+df <- as.data.frame(prob) # make data.frame
+colnames(df) <- c("ten","twentyfive","hundred","thousand") # set names on columns
 
-sd(sample10plays)
-sd(sample25plays)
-sd(sample100plays)
-sd(sample1000plays)
-# use ggplot to create a line chart comparing low to high earnings for 10,25,100,1000. Doing this in log scale would equalize the data? And or do it with facets for diff charts
-hist(sample10plays)
-hist(sample25plays)
-hist(sample100plays)
-hist(sample1000plays)
+# show 6 number summary as indication of data distribution
+summary(df$ten)
+summary(df$twentyfive)
+summary(df$hundred)
+summary(df$thousand)
 
-df <- as.data.frame(prob)
-colnames(df) <- n # set names 10, 25, etc on columns
-comparePlot <- ggplot(df,aes(x=n,y=n))
-comparePlot+geom_line()+facet_grid(10~.)
-qplot(x=n, data=df)
+# simple histogram of each size
+hist(df$ten)
+hist(df$twentyfive)
+hist(df$hundred)
+hist(df$thousand)
+
+# I would like to use ggplot to create a line chart comparing low to high earnings for each column of data using facets for diff columns. But there is only one vector of values per column. I have no co-ord PAIR to refer to, so cartesian plots aren't possible!  
+
+#comparePlot <- ggplot(df,aes())
+#comparePlot+geom_line() + facet_grid(ten ~ thousand, scales = "free")
 
 ### this plot fails
 
@@ -104,9 +101,9 @@ So the theoretical Expected Value is .16 return on the dollar.
 This can be observed by taking the results or any one of the Monte Carlo simulation and diving the sample sd by the number of tries (plays) used in the simulation.
 
 ```{r}
-sd(sample10plays)/10
-sd(sample25plays)/25
-sd(sample1000plays)/1000
+sd(df$ten)/10
+sd(df$twentyfive)/25
+sd(df$thousand)/1000
 
 ```
 
@@ -117,7 +114,7 @@ Use CLT to approximate the probability that the casino loses money when you play
 
 The Central Limit Theorum holds that with a sample size of >= 30, the sample distribution will resemble a normal distribution, with the approximation of the normal distribution increasing as the sample size increases. With a sample size of < 30, as in our case, the results are less certain and more succeptible to error.
 But for purposes of estimation, we know that the probability that the casino loses are 0.47 based on the design of the game.
-With 25 bets, the player has a cost of $25. Using the simple binary formula for standard deviation given in the lecture, the expected value can be calculated using Sample size x the probability of interest. In our case, this means Expected Value = 25(.47) = 11.75. The Standard Error will be the Square Root of (the Expected value x [1-.47])
+With 25 bets, the player has a cost of $25. Using the simple binary formula for standard deviation given in the lecture, the expected value can be calculated using Sample size times the probability of interest. In our case, this means Expected Value = 25(.47) = 11.75. The Standard Error will be the Square Root of (the Expected value x [1-.47])
 The standard error for our case will be 2.5.
 
 ```{r}
@@ -127,7 +124,7 @@ pb <- .47
 ExpV <- tries*pb
 StErr <- sqrt(ExpV*(1-pb))
 
-sim25 <- full_monty(25)
+sim25 <- roulette_monty(25)
 plot(sim25)
 mean(sim25)
 sd(sim25)
@@ -142,7 +139,8 @@ In general, what is the probability that the casino loses money as a function of
 
 ```{r}
 ##Your code here
-plot()
+
+
 ```
 
 Your answer here. 
@@ -158,16 +156,17 @@ Your bank gives out 1,000 loans this year. Create a sampling model and use the f
 ```{r}
 ##your code here
 
-#sampling model
-mortgageOutcome <- sample(rep( c("good", "bad"), times = c(98,2)),100,replace=FALSE)
+# this is the base sampling model. good loans return 1, bad loans 0.
+mortgageOutcome <- sample(rep( c(1, 0), times = c(98,2)),100,replace=FALSE)
+# Here, replace is false. I assume this is correct because the number of loans is finite and we are basically counting down the loans, returning 2% default
 
-getAnnualLosses <- function(n){
-annualLosses <- sample( mortgageOutcome, n, replace=TRUE) #
-  x <- sum(as.numeric(annualLosses == "bad"))# get number of bad loans
+getAnnualLosses <- function(nLoans){
+annualLosses <- sample( mortgageOutcome, nLoans, replace=TRUE) # replace is true, because this is a random sample where each event is independent
+  x <- sum(annualLosses == 0)# get number of bad loans
   losses <- x*120000 # return ONLY losses
 }
 
-losses <- getAnnualLosses(1000)
+losses <- getAnnualLosses(1000)  # this is a test
 ```
 
 ## Problem 2B
@@ -177,22 +176,22 @@ Note that the loss you will incur is a random variable. Use Monte Carlo simulati
 ```{r}
 ##your code here
 
-mortageMonty <- function(loans, B=10000){
-  resultSet <- replicate( B, getAnnualLosses(loans))
+lossesMonteCarlo <- function(nLoans, B=10000){
+  resultSet <- replicate( B, getAnnualLosses(nLoans))
 }
 
-simulation <- mortageMonty(1000)
-summary(simulation)
-simMean <- mean(simulation)
-simSd <- sd(simulation)
-simDF <- as.data.frame(simulation)
-colnames(simDF) <- c("losses") # set names
+lossSimulation <- lossesMonteCarlo(1000)
+summary(lossSimulation)
+lossSimMean <- mean(lossSimulation)
+lossSimSd <- sd(lossSimulation)
+lossSimDF <- as.data.frame(lossSimulation)
+colnames(lossSimDF) <- c("losses") # set names
 # need to create prob distribution graph
-p2 <- ggplot(simDF, 
+p2 <- ggplot(lossSimDF, 
             aes(x=losses)) 
 p2 + geom_histogram() + stat_bin(binwidth = 50) + scale_x_log10()
 ```
-The Monte Carlo simulation was run 10,000 times, simulating 10,000 tries where 2% of loans fail with an average loss per loan of $120,000. Under these conditions, the bank stands to lose about two and a half million dollars/yr to bad loans when issuing one thousand loans, with a mean of 2,401,812 and a standard deviation of 537,967.
+The Monte Carlo simulation was run 10,000 times, simulating 10,000 tries where 2% of loans fail with an average loss per loan of $120,000. Under these conditions, the bank stands to lose about two and a half million dollars/yr to bad loans when issuing one thousand loans, with a mean of 2,401,812 and a standard deviation of 537,967. But since these results are ramdom variables, the SD and mean are not constant.
 
 
 ## Problem 2C
@@ -203,27 +202,48 @@ Your solution here.
 ```{r}
 ###your code here
 
-getProfit <- function(n, interestRate){
-annualProfit <- sample( mortgageOutcome, n, replace=TRUE) #
-  x <- sum(annualProfit == "good")# get number of good loans
-  profitsWInterest = x*180000*interestRate # annual profit on good loans
-  losses <- sum(annualProfit == "bad") # get losses
-  lossValue <- losses*12000
-  net = profitsWInterest-lossValue # net will return the annual balance
-  #c(profitsWInterest,losses,net) # return a matrix of figures
+# Here is a function to return an interest rate based on desired profit.
+# Thanks to Nicholas Franco
+
+# this method returns variable results. With the rounding in the getInterestRate function, the results vary between .01 and .02
+
+getInterestRate <- function(nLoans, desiredProfit){
+  annualProfit <- sample( mortgageOutcome, nLoans, replace=TRUE)
+  good <- sum(annualProfit==1)
+  bad <- sum(annualProfit==0)
+  neededInterestRate <- round((desiredProfit + (bad*120000))/(good*180000),digits=2)
+  
 }
 
+rateFor100000 <- getInterestRate(1000,100000) # this is a test
+
+
+# the getProfit function samples the mortgageOutcome model and returns net profit per year in dollars
+
+getProfit <- function(nLoans, interestRate=0){
+  annualProfit <- sample( mortgageOutcome, nLoans, replace=TRUE) 
+  x <- sum(annualProfit == 1)# get number of good loans
+  profitsWInterest = x*(180000*interestRate) # annual profit on good loans @ interestRate
+  losses <- sum(annualProfit == 0) # get losses
+  lossValue <- losses*12000 # calculate the value of the defaults
+  net = profitsWInterest-lossValue # net will return the annual balance
+}
+
+# a few tests
+profits <- getProfit(1000)# this is a test of 0 interest
 profits <- getProfit(1000, .002)# this is a test
 
-profitMCarlo <- function(loans, interestRate, B=10000){
-  resultSet <- replicate( B, getProfit(loans, interestRate))
+# this is a monte carlo that runs simulation and returns results in dollars
+profitMonteCarlo <- function(nLoans, interestRate=0, B=10000){
+  resultSet <- replicate( B, getProfit(nLoans, interestRate))
 }
 
-profit002 <- profitMCarlo(1000,.002)
+# So, I can get the desired profit by passing .001 [sometimes] or .002 [better overall]. Here, I leave .002
+profit002 <- profitMonteCarlo(1000,.002)
 mean(profit002)
 
 ```
-Losses occur very infrequently with this model, where only 2% of loans default. This model will return a profit with a very low rate of interest. Although the values returned from the MonteCarlo simulation are random, I can consistently see a profit of somewhere just $100,000 by charging interest rates around .002 or 0.2%
+Losses occur very infrequently with this model, where only 2% of loans default. This model will return a profit with a very low rate of interest. Although the values returned from the profitMonteCarlo simulation are random, I can consistently see a profit of somewhere near $100,000 by charging interest rates around .002 or 0.2%
 
 ## Problem 2D
 
@@ -231,10 +251,41 @@ In problem 2C, you were able to set a very low interest rate. Your customers wil
 
 ```{r}
 ##your code here
-# original model proposes c("good", "bad"), times = c(98,2)/100
-# prob of good = p(.98), prob of bad = p(.02) mean losses are 240,000. total loans value 180,000 x 1000 or 180,000,000
-pnorm(-1) + 1-pnorm(1)
+# The original model proposes c(1, 0), times = c(98,2)/100
+#  prob of 0 'bad' = p(.02), prob of 1 'good' = p(.98)
+
+# Here, I am trying to get the z-index for probability that profit will be < 0.
+N <- 10000 # number of tries/draws
+i <- .001 # lower interest rate increases chance of profit loss
+X <- profitMonteCarlo(N,i) # get a sample
+SD =  ( 180000*i + 120000) * sqrt(0.02*0.98) # CONFUSION: is SD the same thing as SE???
+mu <- (180000 * i) * (1-.98) - (120000 * .02)
+
+mean(X) # mean of sample
+sigma <- sd(X) # get sd
+z = - sqrt(N) * sum(X) * mu / sigma # This is totally wrong. 
+
+
+
+ 
+# I want to make a Monte Carlo that just returns the sm of good + bad loans. Since bad loans return 0, the sum is actually only the good loans.
+getPGoodLoans <- function(nLoans, interestRate=0){
+annualProfit <- sample( mortgageOutcome, nLoans, replace=TRUE) 
+  x <- sum(annualProfit == 1)# get raw number of good loans
+}
+
+baseGoodMonteCarlo <- function(nLoans, interestRate=0, B=10000){
+  resultSet <- replicate( B, getPGoodLoans(nLoans, interestRate))
+}
+goodP <- mean(baseGoodMonteCarlo(N, .002)/N)
+pnorm(-1*goodP) + 1-pnorm(goodP)
 ```
+
+The probability of loss is 0.327
+
+Honestly, I have read the posts for this topic repeatedly, reviewed the lecture notes, and I cannot grasp how I am supposed to get the values, and more importantly, I don't know WHY. 
+
+I know that I need to get an interest rate value that will give me a probability of .001 error.
 
 ## Problem 2E
 
@@ -246,10 +297,14 @@ Your solution here.
 
 ```{r}
 ###your code here
+N <- 10000
+profitAt002 <- profitMonteCarlo(N,.002)
+mean(profitAt002)/N
+#If you sample N times and add the 0s and 1s to create S, the SE is sqrt( N p (1-p) )
+SE <- sqrt(N*(0.327*(1-0.327)))
 
-profit001 <- profitMCarlo(1000,.001)
-mean(profit001)
 ```
+The original model assumes that the results are binary: it is either 1 or 0. We also know that the probability of loss is .02. If I apply this formula [$\mid a-b \mid \sqrt{p(1-p)}$] to this situation, the SD [which, because this is a sample == SE] becomes SE <- sqrt(1000*(0.327*(1-0.327))), which in the above case returns 46.91, With a mean of about 113. This is a high rate of error.
 
 ## Problem 2F
 
@@ -259,10 +314,17 @@ Hint: See if the disparity is smaller for larger values of $p$. Also check for p
 
 ```{r}
 ##your code here
+N <- 10000
+profitAt02BiggerN <- profitMonteCarlo(N,.02)
+mean(profitAt02BiggerN)/N
+#If you sample N times and add the 0s and 1s to create S, the SE is sqrt( N p (1-p) )
+SE <- sqrt(N*(0.317*(1-0.317)))
 ```
 
 
 Your answer here.
+
+
 
 ## Problem 3
 
@@ -345,3 +407,9 @@ Generate a simulation with correlated outcomes such as those above. This time us
 ## Problem 4
 
 Read [this wikipedia page](https://en.wikipedia.org/wiki/Financial_crisis_of_2007%E2%80%9308) about the financial crisis. Write a paragraph describing how what you learned in this homework can help explain the conditions that led to the crisis.
+
+Various flawed regulatory, market, technical and human factors converged to cause the Financial Crisis of 2007-2008. A boom in new financial products resulted in more complexity and reduced the ease by which overseers could assess and value risk on the books of financial institutions. The design of many financial products multiplied the number of actors connected to a single mortgage, making accountability and oversight more difficult.
+Among the leading factors were a lax regulatory environment that allowed financial institutions to hide their ‘exposure’ or indebtedness, the financial incentive for individual and institutional sellers of mortgages and financial instruments to minimize the risks involved in the investments they offered, and computer models that did not accurately reflect the performance of the market under the rapidly changing conditions introduced by many new and poorly understood types of investments being offered.
+
+The work we did for this assignment has, in a small way, demonstrated some of the methods used to mitigate risk and provide a stronger guarantee of return on investments. We created models that simulated a pseudo ‘historical record’ of a mortgage company that had policies in place that weeded out a very percentage of loan defaulters. Our initial model ((98:02) more closely reflects the kinds of policies that were in place in times preceding those leading up to the Crisis. Under these conditions it was easy to guarantee a profit at a low interest rate, because losses were low. As the losses increase, the rate must also increase to offset those losses. The problem with the models used leading up to the prices is that they did not correctly model all conditions in the dynamic financial environment, aiding many institutions to underestimate risk and over-extend their indebtedness.
+
